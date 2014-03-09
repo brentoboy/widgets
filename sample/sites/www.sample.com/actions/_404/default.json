@@ -1,0 +1,27 @@
+{
+	"type": "html",
+	"wireframe": "default",
+	"skin": "default",
+	"title": "Error 404 - Not Found",
+	"statusCode": 404,
+	"widgetBlocks": {
+		"head": [
+		],
+		"header": [
+		],
+		"left": [
+		],
+		"center": [
+			{
+				"id": "firstContent",
+				"widget": "sample",
+				"factors": {
+					"heading": "widget 5",
+					"content": "this is an other page"
+				}
+			},
+		],
+		"footer": [
+		]
+	}
+}

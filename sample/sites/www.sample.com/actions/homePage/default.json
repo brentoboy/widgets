@@ -1,0 +1,26 @@
+{
+	"type": "html",
+	"wireframe": "default",
+	"skin": "default",
+	"title": "home page",
+	"widgetBlocks": {
+		"head": [
+		],
+		"header": [
+		],
+		"left": [
+		],
+		"center": [
+			{
+				"id": "firstContent",
+				"widget": "sample",
+				"factors": {
+					"heading": "widget 5",
+					"content": "this is an other page"
+				}
+			},
+		],
+		"footer": [
+		]
+	}
+}

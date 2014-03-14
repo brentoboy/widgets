@@ -1,12 +1,20 @@
 {
 	"type": "html",
-	"wireframe": "testJade",
-	"skin": "default",
+	"wireframe": "default",
+	"skin": "nifty",
 	"title": "special home page",
 	"widgetBlocks": {
 		"head": [
+			{
+				"id": "reqSomeScripts",
+				"widget": "testScript/hasMultipleDependencies",
+			},
 		],
 		"header": [
+			{
+				"id": "iDontRender",
+				"widget": "testLogic/alwaysNoRender",
+			},
 		],
 		"left": [
 		],
@@ -14,9 +22,9 @@
 			{
 				"id": "firstContent",
 				"widget": "sample",
-				"factors": {
+				"configs": {
 					"heading": "widget 5",
-					"content": "this is an other page"
+					"content": "this is a special page"
 				}
 			},
 		],

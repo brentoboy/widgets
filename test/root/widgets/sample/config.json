@@ -13,6 +13,12 @@
 		},
 		{
 			"name":"content"
+		},
+		{
+			"name":"pageNo"
+		},
+		{
+			"name":"pageSize"
 		}
 	]
 }

@@ -1,6 +1,6 @@
 {
 	"type": "html",
-	"wireframe": "testJade",
+	"wireframe": "default",
 	"skin": "default",
 	"title": "home page",
 	"widgetBlocks": {
@@ -14,9 +14,9 @@
 			{
 				"id": "firstContent",
 				"widget": "sample",
-				"factors": {
+				"configs": {
 					"heading": "widget 5",
-					"content": "this is an other page"
+					"footing": "the end"
 				}
 			},
 		],

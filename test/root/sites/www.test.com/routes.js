@@ -3,4 +3,8 @@ module.exports = {
 		pattern: "/",
 		action: "homePage",
 	},
+	userPage: {
+		pattern: "/user/(int:id)/(slug:name).html",
+		action: "userPage",
+	}
 }

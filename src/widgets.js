@@ -1052,10 +1052,20 @@ var wtf = {
 			return next();
 		}
 
-		var styleInfo = JSON.parse(new Buffer(decodeURIComponent(request.ux), "base64"));
+		var styleInfo;
+		var base64String = decodeURIComponent(request.ux || request.params.ux || "");
+		try {
+			var buffer = new Buffer(base64String, "base64");
+			styleInfo = JSON.parse(buffer);
+		}
+		catch (e) {
+			request.logError(e);
+			request.logInfo("base64String: " + base64String);
+			return next();
+		}
+
 		request.skin = styleInfo.t; // "t" was for "theme"
 		request.requiredStyles = styleInfo.w; //w is short for widgets
-		request.responseHeaders['Content-Type'] = "text/css";
 
 		var defaultSkin = wtf.paths.cssSkinFolder("default");
 		var themedSkin = wtf.paths.cssSkinFolder(request.skin);
@@ -1108,11 +1118,12 @@ var wtf = {
 				}
 				// load the contents of all of those files
 				async.parallel(loadFiles, function(err, results) {
-					// TODO: are there any headers we need to set?
 					// assemble all of the scripts into one script as the response body
 					if (results) {
 						var lessData = results.join("\n\n");
 						less.render(lessData, function(err, compiledCss) {
+							request.responseHeaders = request.responseHeaders || {};
+							request.responseHeaders['Content-Type'] = "text/css";
 							request.responseBody = compiledCss;
 							return next();
 						})
@@ -1135,8 +1146,16 @@ var wtf = {
 		if (request.action != "_js") {
 			return next();
 		}
-
-		request.requiredScripts = JSON.parse(new Buffer(decodeURIComponent(request.ux), "base64"));
+		var base64String = decodeURIComponent(request.ux || request.params.ux || "");
+		try {
+			var buffer = new Buffer(base64String, "base64");
+			request.requiredScripts = JSON.parse(buffer);
+		}
+		catch (e) {
+			request.logError(e);
+			request.logInfo("base64String: " + base64String);
+			return next();
+		}
 		for(var i in request.requiredScripts) {
 			request.logInfo("\t" + request.requiredScripts[i]);
 		}
@@ -1159,7 +1178,7 @@ var wtf = {
 
 		// load the scripts in parallel
 		async.parallel(loadScripts, function(err, results) {
-			// TODO: are there any headers we need to set?
+			request.responseHeaders = request.responseHeaders || {};
 			request.responseHeaders['Content-Type'] = "application/javascript";
 			// assemble all of the scripts into one script as the response body
 			if (results) {

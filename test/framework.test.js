@@ -1,9 +1,12 @@
-var wtf = require('../src/widgets.js');
 var chai = require('chai');
 chai.Assertion.includeStack = true;
 var assert = chai.assert;
 var expect = chai.expect;
 var httpMocks = require('node-mocks-http');
+
+var wtf = require('../src/framework.js');
+var Widget = require('../src/widget.js');
+var Page = require('../src/page.js');
 
 var testSite = {
 	root: __dirname + "/root",
@@ -72,7 +75,7 @@ describe("Widgets, the Framework", function() {
 			expect(route.getUrl()).equal("/");
 			expect(route.getUrl({})).equal("/");
 			expect(route.getUrl({junk:"stuff"})).equal("/");
-			expect(wtf.findRoute("/")).equals(route);
+			expect(wtf._findRoute("/")).equals(route);
 
 			// jsRoute
 			route = wtf.routes.jsRoute;
@@ -88,7 +91,7 @@ describe("Widgets, the Framework", function() {
 			//assert(route.getUrl({}) == "/js/undefined.js");
 			//assert(route.getUrl({junk:"stuff"}) == "/js/undefined.js");
 			expect(route.getUrl({ux:"bla-bla-bla"})).equal("/js/bla-bla-bla.js");
-			expect(wtf.findRoute("/js/abc-123.js")).equal(route);
+			expect(wtf._findRoute("/js/abc-123.js")).equal(route);
 
 			// cssRoute
 			route = wtf.routes.cssRoute;
@@ -103,15 +106,15 @@ describe("Widgets, the Framework", function() {
 			//assert(route.getUrl({}) == "/css/undefined.css");
 			//assert(route.getUrl({junk:"stuff"}) == "/css/undefined.css");
 			expect(route.getUrl({ux:"bla-bla-bla"})).equal("/css/bla-bla-bla.css");
-			expect(wtf.findRoute("/css/abc-123.css")).equal(route);
+			expect(wtf._findRoute("/css/abc-123.css")).equal(route);
 
 			// 404
 			var route = wtf.routes._404;
-			expect(wtf.findRoute("")).equal(route);
-			expect(wtf.findRoute(null)).equal(route);
-			expect(wtf.findRoute(".html")).equal(route);
-			expect(wtf.findRoute(503034)).equal(route);
-			expect(wtf.findRoute("/some/random/1/path/on-the-server.php")).equal(route);
+			expect(wtf._findRoute("")).equal(route);
+			expect(wtf._findRoute(null)).equal(route);
+			expect(wtf._findRoute(".html")).equal(route);
+			expect(wtf._findRoute(503034)).equal(route);
+			expect(wtf._findRoute("/some/random/1/path/on-the-server.php")).equal(route);
 			return done();
 		})
 		it("should preload widget configs", function(done) {
@@ -144,9 +147,9 @@ describe("Widgets, the Framework", function() {
 			return done();
 		})
 	})
-	describe("loadWidgetConfig", function() {
+	describe("_loadWidgetConfig", function() {
 		it("should load sample widget", function(done) {
-			wtf.loadWidgetConfig("sample", function(err, config) {
+			wtf._loadWidgetConfig("sample", function(err, config) {
 				assert(!err);
 
 				expect(config.name).equal("sample");
@@ -168,7 +171,7 @@ describe("Widgets, the Framework", function() {
 			});
 		})
 		it("should create minimalistic stub for widget with no config", function(done) {
-			wtf.loadWidgetConfig("testConfig/hasNoConfig", function(err, config) {
+			wtf._loadWidgetConfig("testConfig/hasNoConfig", function(err, config) {
 				assert(!err);
 				expect(config.name).equal("testConfig/hasNoConfig");
 				assert(!config.description);
@@ -177,19 +180,19 @@ describe("Widgets, the Framework", function() {
 			})
 		})
 		it("should error out loading an invalid config.json", function(done) {
-			wtf.loadWidgetConfig("testConfig/hasInvalidConfig", function(err, config) {
+			wtf._loadWidgetConfig("testConfig/hasInvalidConfig", function(err, config) {
 				assert(err);
 				return done();
 			})
 		})
 		it("should error out loading a completely non-existant widget", function(done) {
-			wtf.loadWidgetConfig("non-existant-widget", function(err, config) {
+			wtf._loadWidgetConfig("non-existant-widget", function(err, config) {
 				assert(err);
 				return done()
 			})
 		})
 	})
-	describe("mergeConfigs", function() {
+	describe("_mergeConfigs", function() {
 		var defaultConfigs = [
 			{
 				"name":"heading",
@@ -209,7 +212,7 @@ describe("Widgets, the Framework", function() {
 		it("should have combined inputs from all three sources", function(done) {
 			var uxConfigs = { content: "val" };
 			var requestParams = { footing: "foot" };
-			var result = wtf.mergeConfigs(defaultConfigs, uxConfigs, requestParams);
+			var result = wtf._mergeConfigs(defaultConfigs, uxConfigs, requestParams);
 			expect(result.heading).equal("This is a sample");
 			expect(result.footing).equal("foot");
 			expect(result.content).equal("val");
@@ -218,17 +221,17 @@ describe("Widgets, the Framework", function() {
 		it.skip("should complain if uxConfigs defines values not defined in defaultConfigs", function(done) {
 			// the complaint shouldnt be an exception, it should be a warning log entry of some kind
 			var uxConfigs = { newConfig: "x" };
-			expect(function() { wtf.mergeConfigs(defaultConfigs, uxConfigs, {}); }).to.throw();
+			expect(function() { wtf._mergeConfigs(defaultConfigs, uxConfigs, {}); }).to.throw();
 			return done();
 		})
 		it("should not complain if requestParams has values not definded in defaultConfigs", function(done) {
 			var requestParams = { newConfig: "x" };
-			expect(function() { wtf.mergeConfigs(defaultConfigs, {}, requestParams); }).to.not.throw();
+			expect(function() { wtf._mergeConfigs(defaultConfigs, {}, requestParams); }).to.not.throw();
 			return done();
 		})
 		it("should NOT include things from requestParams that are not in the defaultConfigs", function(done) {
 			var requestParams = { newConfig: "x" };
-			var results = wtf.mergeConfigs(defaultConfigs, {}, requestParams);
+			var results = wtf._mergeConfigs(defaultConfigs, {}, requestParams);
 			expect(results).not.has.ownProperty('newConfig');
 			return done();
 		})
@@ -236,11 +239,11 @@ describe("Widgets, the Framework", function() {
 			var falsyThings = [ false, 0, "", null, undefined, NaN ]
 			for (i in falsyThings) {
 				var uxConfigs = { heading: falsyThings[i] };
-				var results = wtf.mergeConfigs(defaultConfigs, uxConfigs, {});
+				var results = wtf._mergeConfigs(defaultConfigs, uxConfigs, {});
 				expect(results).has.ownProperty('heading');
 				assert(!results.heading);
 
-				results = wtf.mergeConfigs(defaultConfigs, {}, uxConfigs);
+				results = wtf._mergeConfigs(defaultConfigs, {}, uxConfigs);
 				expect(results).has.ownProperty('heading');
 				assert(!results.heading);
 			}
@@ -249,21 +252,21 @@ describe("Widgets, the Framework", function() {
 		it("should favor requestParams over all else", function(done) {
 			var uxConfigs = { heading: "ux" };
 			var requestParams = { heading: "param" };
-			var result = wtf.mergeConfigs(defaultConfigs, uxConfigs, requestParams);
+			var result = wtf._mergeConfigs(defaultConfigs, uxConfigs, requestParams);
 			expect(result.heading).equal("param");
 			return done();
 		})
 		it("should favor uxConfigs over default configs", function(done) {
 			var uxConfigs = { heading: "ux" };
 			var requestParams = {};
-			var result = wtf.mergeConfigs(defaultConfigs, uxConfigs, {});
+			var result = wtf._mergeConfigs(defaultConfigs, uxConfigs, {});
 			expect(result.heading).equal("ux");
 			return done();
 		})
 		it("should have default configs when nothing else overrides them", function(done) {
 			var uxConfigs = { footing: "foot" };
 			var requestParams = { content: "stuff" };
-			var result = wtf.mergeConfigs(defaultConfigs, uxConfigs, {});
+			var result = wtf._mergeConfigs(defaultConfigs, uxConfigs, {});
 			expect(result.heading).equal("This is a sample");
 			return done();
 		})
@@ -275,12 +278,12 @@ describe("Widgets, the Framework", function() {
 			var badUxConfigs = 012;
 			var badRequestParams = function(){};
 
-			expect(function() { wtf.mergeConfigs(badDefaultConfigs, goodUxConfigs, goodRequestParams) }).throw();
-			expect(function() { wtf.mergeConfigs(goodDefaultConfigs, badUxConfigs, goodRequestParams) }).throw();
-			expect(function() { wtf.mergeConfigs(goodDefaultConfigs, goodUxConfigs, badRequestParams) }).throw();
-			expect(function() { wtf.mergeConfigs(badDefaultConfigs, badUxConfigs, goodRequestParams) }).throw();
-			expect(function() { wtf.mergeConfigs(badDefaultConfigs, goodUxConfigs, badRequestParams) }).throw();
-			expect(function() { wtf.mergeConfigs(badDefaultConfigs, badUxConfigs, badRequestParams) }).throw();
+			expect(function() { wtf._mergeConfigs(badDefaultConfigs, goodUxConfigs, goodRequestParams) }).throw();
+			expect(function() { wtf._mergeConfigs(goodDefaultConfigs, badUxConfigs, goodRequestParams) }).throw();
+			expect(function() { wtf._mergeConfigs(goodDefaultConfigs, goodUxConfigs, badRequestParams) }).throw();
+			expect(function() { wtf._mergeConfigs(badDefaultConfigs, badUxConfigs, goodRequestParams) }).throw();
+			expect(function() { wtf._mergeConfigs(badDefaultConfigs, goodUxConfigs, badRequestParams) }).throw();
+			expect(function() { wtf._mergeConfigs(badDefaultConfigs, badUxConfigs, badRequestParams) }).throw();
 
 			return done();
 		})
@@ -289,27 +292,28 @@ describe("Widgets, the Framework", function() {
 			var goodUxConfigs = { footing: "foot" };
 			var goodRequestParams = { content: "stuff" };
 
-			expect(function() { wtf.mergeConfigs({}, {}, goodRequestParams) }).to.not.throw();
-			expect(function() { wtf.mergeConfigs(goodDefaultConfigs, null, goodRequestParams) }).to.not.throw();
-			expect(function() { wtf.mergeConfigs(goodDefaultConfigs, goodUxConfigs, "") }).to.not.throw();
-			expect(function() { wtf.mergeConfigs(undefined, {}, goodRequestParams) }).to.not.throw();
-			expect(function() { wtf.mergeConfigs(null, "", {}) }).to.not.throw();
-			expect(function() { wtf.mergeConfigs("", false, 0) }).to.not.throw();
+			expect(function() { wtf._mergeConfigs({}, {}, goodRequestParams) }).to.not.throw();
+			expect(function() { wtf._mergeConfigs(goodDefaultConfigs, null, goodRequestParams) }).to.not.throw();
+			expect(function() { wtf._mergeConfigs(goodDefaultConfigs, goodUxConfigs, "") }).to.not.throw();
+			expect(function() { wtf._mergeConfigs(undefined, {}, goodRequestParams) }).to.not.throw();
+			expect(function() { wtf._mergeConfigs(null, "", {}) }).to.not.throw();
+			expect(function() { wtf._mergeConfigs("", false, 0) }).to.not.throw();
 
 			return done();
 		})
 		it("should be an empty object when all inputs are empty or null", function(done) {
-			results = wtf.mergeConfigs("", [], null);
+			results = wtf._mergeConfigs("", [], null);
 			expect(results).deep.equal({});
 			return done();
 		})
 	})
-	describe("runLogic", function() {
+	describe("_runLogic", function() {
 		it("should run logic if there is a logic file", function(done) {
-			var widget = wtf.createWidget('sample');
-			wtf.loadWidgetConfig(widget.name, function(err, config) {
-				widget.configs = wtf.mergeConfigs(config.configs, null, {footing: "stuff"});
-				wtf.runLogic(widget, function() {
+			var widget = new Widget('sample');
+			wtf._loadWidgetConfig(widget.name, function(err, config) {
+				widget.configs = wtf._mergeConfigs(config.configs, null, {footing: "stuff"});
+				var page = null;
+				wtf._runLogic(widget, page, function() {
 					expect(widget.configs.heading).equal('This is a sample');
 					expect(widget.configs.footing).equal('stuff');
 					expect(widget.configs.content).equal('Here is the content you requested.');
@@ -319,7 +323,7 @@ describe("Widgets, the Framework", function() {
 			})
 		})
 		it("should change nothing if there is no logic file", function(done) {
-			var widget = wtf.createWidget("hasNoLogic");
+			var widget = new Widget("hasNoLogic");
 			widget.configs = {
 				heading: 'This is a sample',
 				footing: '',
@@ -329,8 +333,8 @@ describe("Widgets, the Framework", function() {
 				name: 'some-slug',
 				id: 50,
 			}
-
-			wtf.runLogic(widget, function(err) {
+			var page = null;
+			wtf._runLogic(widget, page, function(err) {
 				assert(!err);
 				expect(widget.configs.heading).equal('This is a sample');
 				assert(!widget.configs.footing);
@@ -346,7 +350,7 @@ describe("Widgets, the Framework", function() {
 	// describe('render', function() {
 	// 	it("should render render.jsph if it is available", function(done) {
 	// 		var context = wtf.newContext();
-	// 		var widget = wtf.createWidget('testRender/hasJsphJadeAndHtml');
+	// 		var widget = new Widget('testRender/hasJsphJadeAndHtml');
 	// 		widget.configs.content = "stuff";
 	// 		wtf.render(widget, function(err) {
 	// 			assert(!err);
@@ -356,7 +360,7 @@ describe("Widgets, the Framework", function() {
 	// 	})
 	// 	it("should render render.jade if it is available (and jsph is not)", function(done) {
 	// 		var context = wtf.newContext();
-	// 		var widget = wtf.createWidget('testRender/hasJadeAndHtml');
+	// 		var widget = new Widget('testRender/hasJadeAndHtml');
 	// 		widget.configs.content = "stuff";
 	// 		wtf.render(widget, function(err) {
 	// 			assert(!err);
@@ -366,7 +370,7 @@ describe("Widgets, the Framework", function() {
 	// 	})
 	// 	it("should render render.html if it is available (and jsph and jade are not)", function(done) {
 	// 		var context = wtf.newContext();
-	// 		var widget = wtf.createWidget('testRender/hasHtmlTemplateOnly');
+	// 		var widget = new Widget('testRender/hasHtmlTemplateOnly');
 	// 		wtf.render(widget, function(err) {
 	// 			assert(!err);
 	// 			assert(widget.html == '<h1>stuff</h1>');
@@ -375,7 +379,7 @@ describe("Widgets, the Framework", function() {
 	// 	})
 	// 	it("should return empty string if no template is available", function(done) {
 	// 		var context = wtf.newContext();
-	// 		var widget = wtf.createWidget('testRender/hasNoTemplate');
+	// 		var widget = new Widget('testRender/hasNoTemplate');
 	// 		wtf.render(widget, function(err) {
 	// 			assert(!err);
 	// 			assert(widget.html === '');
@@ -384,7 +388,7 @@ describe("Widgets, the Framework", function() {
 	// 	})
 	// 	it("should return empty string if noRender flag is set", function(done) {
 	// 		var context = wtf.newContext();
-	// 		var widget = wtf.createWidget('testRender/hasJsphJadeAndHtml');
+	// 		var widget = new Widget('testRender/hasJsphJadeAndHtml');
 	// 		widget.configs.content = "stuff";
 	// 		widget.noRender = true;
 	// 		wtf.render(widget, function(err) {
@@ -394,10 +398,10 @@ describe("Widgets, the Framework", function() {
 	// 		})
 	// 	})
 	// })
-	describe('findScripts', function() {
+	describe('_findScripts', function() {
 		it("should find a script file for a widget", function(done) {
-			var widget = wtf.createWidget('testScript/hasScriptNoDependency');
-			wtf.findScripts(widget, function(err) {
+			var widget = new Widget('testScript/hasScriptNoDependency');
+			wtf._findScripts(widget, function(err) {
 				assert(!err)
 				assert(widget.scripts.length == 1)
 				assert(widget.scripts[0].widget == 'testScript/hasScriptNoDependency')
@@ -405,16 +409,16 @@ describe("Widgets, the Framework", function() {
 			})
 		})
 		it("should find no script file if a widget has no script", function(done) {
-			var widget = wtf.createWidget('testScript/hasNoScript');
-			wtf.findScripts(widget, function(err) {
+			var widget = new Widget('testScript/hasNoScript');
+			wtf._findScripts(widget, function(err) {
 				assert(!err);
 				assert(!widget.scripts || widget.scripts.length == 0);
 				return done();
 			})
 		})
 		it("should find a dependency script and a widgets script file - dependency first", function(done) {
-			var widget = wtf.createWidget('testScript/hasScriptWithDependency');
-			wtf.findScripts(widget, function(err) {
+			var widget = new Widget('testScript/hasScriptWithDependency');
+			wtf._findScripts(widget, function(err) {
 				assert(!err);
 				assert(widget.scripts.length == 2);
 				assert(widget.scripts[0].widget == 'testScript/hasScriptNoDependency');
@@ -423,8 +427,8 @@ describe("Widgets, the Framework", function() {
 			})
 		})
 		it("should find a dependency script even if a widget has no script of its own", function(done) {
-			var widget = wtf.createWidget('testScript/hasDependencyButNoScript');
-			wtf.findScripts(widget, function(err) {
+			var widget = new Widget('testScript/hasDependencyButNoScript');
+			wtf._findScripts(widget, function(err) {
 				assert(!err);
 				assert(widget.scripts.length == 1);
 				assert(widget.scripts[0].widget == 'testScript/hasScriptNoDependency');
@@ -432,8 +436,8 @@ describe("Widgets, the Framework", function() {
 			})
 		})
 		it("should find multiple dependencies", function(done) {
-			var widget = wtf.createWidget('testScript/hasMultipleDependencies');
-			wtf.findScripts(widget, function(err) {
+			var widget = new Widget('testScript/hasMultipleDependencies');
+			wtf._findScripts(widget, function(err) {
 				assert(!err);
 				assert(widget.scripts.length == 3);
 				assert(widget.scripts[0].widget == 'sample');
@@ -443,8 +447,8 @@ describe("Widgets, the Framework", function() {
 			})
 		})
 		it("should find dependencies of dependencies", function(done) {
-			var widget = wtf.createWidget('testScript/hasDependenciesWithDependencies');
-			wtf.findScripts(widget, function(err) {
+			var widget = new Widget('testScript/hasDependenciesWithDependencies');
+			wtf._findScripts(widget, function(err) {
 				assert(!err);
 				assert(widget.scripts.length == 4);
 				assert(widget.scripts[0].widget == 'sample');
@@ -455,19 +459,19 @@ describe("Widgets, the Framework", function() {
 			})
 		})
 		it("should not find any scripts if noRender flag is set", function(done) {
-			var widget = wtf.createWidget("sample");
+			var widget = new Widget("sample");
 			widget.noRender = true;
-			wtf.findScripts(widget, function(err) {
+			wtf._findScripts(widget, function(err) {
 				assert(!err);
 				assert(widget.scripts.length == 0);
 				return done();
 			})
 		})
 	})
-	describe('findStyles', function() {
+	describe('_findStyles', function() {
 		it("should add a widget if it has a .less file", function(done) {
-			var widget = wtf.createWidget("sample")
-			wtf.findStyles(widget, function(err) {
+			var widget = new Widget("sample")
+			wtf._findStyles(widget, function(err) {
 				assert(!err);
 				assert(widget.styles.length == 1);
 				assert(widget.styles[0].widget == widget.name);
@@ -476,26 +480,26 @@ describe("Widgets, the Framework", function() {
 			})
 		});
 		it("should not add a widget if it doesn't have a .less file", function(done) {
-			var widget = wtf.createWidget("testStyles/hasNoStyles")
-			wtf.findStyles(widget, function(err) {
+			var widget = new Widget("testStyles/hasNoStyles")
+			wtf._findStyles(widget, function(err) {
 				assert(!err);
 				assert(widget.styles.length == 0);
 				return done();
 			})
 		});
 		it("should not add a widget if noRender flag is set", function(done) {
-			var widget = wtf.createWidget("sample")
+			var widget = new Widget("sample")
 			widget.noRender = true;
-			wtf.findStyles(widget, function(err) {
+			wtf._findStyles(widget, function(err) {
 				assert(!err);
 				assert(widget.styles.length == 0);
 				return done();
 			})
 		});
 		it("should add a widget if a skinned .less file exists for the current skin, even if default styles arent provided.", function(done) {
-			var widget = wtf.createWidget("testStyles/hasSkinnedStylesOnly")
+			var widget = new Widget("testStyles/hasSkinnedStylesOnly")
 			widget.skin = "nifty";
-			wtf.findStyles(widget, function(err) {
+			wtf._findStyles(widget, function(err) {
 				assert(!err);
 				expect(widget.styles.length).equal(1);
 				expect(widget.styles[0].widget).equal(widget.name);
@@ -504,9 +508,9 @@ describe("Widgets, the Framework", function() {
 			})
 		})
 		it("should add a widget if a skinned .less file doesnt exist for the current skin ... if default styles are provided.", function(done) {
-			var widget = wtf.createWidget("testStyles/hasDefaultStylesOnly")
+			var widget = new Widget("testStyles/hasDefaultStylesOnly")
 			widget.skin = "nifty";
-			wtf.findStyles(widget, function(err) {
+			wtf._findStyles(widget, function(err) {
 				assert(!err);
 				expect(widget.styles.length).equal(1);
 				expect(widget.styles[0].widget).equal(widget.name);
@@ -515,16 +519,16 @@ describe("Widgets, the Framework", function() {
 			})
 		})
 		it("It should not add a widget that has another skin .less file if neither the current skin nor the default skin are provided.", function(done) {
-			var widget = wtf.createWidget("testStyles/hasSkinnedStylesOnly")
+			var widget = new Widget("testStyles/hasSkinnedStylesOnly")
 			widget.skin = "non-existant-skin";
-			wtf.findStyles(widget, function(err) {
+			wtf._findStyles(widget, function(err) {
 				assert(!err);
 				expect(widget.styles.length).equal(0);
 				return done();
 			})
 		})
 	})
-	describe('prepareWidget', function() {
+	describe('_prepareWidget', function() {
 		it("should work", function(done) {
 			var requestParams = {
 				id: 1,
@@ -532,26 +536,26 @@ describe("Widgets, the Framework", function() {
 				content: 'content from request param',
 			}
 
-			var widget = wtf.createWidget("sample");
+			var widget = new Widget("sample");
 			widget.skin = "nifty";
 
-			widget.uxConfigs = { //from action-ux config file
+			widget.configs = { //from action-ux config file
 				heading: 'Hello Rubix.js',
 				content: 'content from ux config file',
 				junk: "junk",
 			}
 
-			wtf.prepareWidget(widget, requestParams, function(err) {
+			wtf._prepareWidget(widget, null, requestParams, function(err) {
 				assert(!err);
 				assert(!widget.errors || widget.errors.length == 0);
 
 				assert(!widget.configs.id);
 				assert(!widget.configs.name);
 				assert(!widget.configs.junk);
-				assert(widget.configs.content == 'content from request param');
-				assert(widget.configs.heading == 'Hello Rubix.js');
+				expect(widget.configs.content).equal('content from request param');
+				expect(widget.configs.heading).equal('Hello Rubix.js');
 				assert(!widget.configs.footing);
-				assert(widget.configs.touchedByLogic);
+				expect(widget.configs.touchedByLogic).equal(true);
 
 				assert(!widget.noRender);
 
@@ -650,7 +654,7 @@ describe("Widgets, the Framework", function() {
 	// 		// 	{ widget: "sample1", time: 1512 },
 	// 		// 	{ widget: "another/widget", time: 1902923 },
 	// 		// ]
-	// 		// var cssFileUrl = wtf.buildCssFileUrl(context);
+	// 		// var cssFileUrl = wtf._buildCssFileUrl(context);
 	// 		context.ux = "eyJ0IjoieXVtbXkiLCJ3IjpbInNhbXBsZTEiLCJhbm90aGVyL3dpZGdldCJdfQ%3D%3D";
 	// 		var requestedStyles = wtf.extractCssListFromUrl(context);
 	// 		assert(requestedStyles.t == 'yummy');
@@ -660,60 +664,50 @@ describe("Widgets, the Framework", function() {
 	// 		return done();
 	// 	})
 	// })
-	describe('loadScript', function() {
-		it("should load a widget's script if it is available", function(done) {
-			wtf.loadScript('sample', function(err, script) {
-				assert(!err);
-				expect(script).equal("// this is a sample script.js");
-				return done();
-			})
-		})
-		it("should gracefully return no script if no script is available", function(done) {
-			wtf.loadScript('testScript/hasNoScript', function(err, script) {
-				//assert(err);
-				assert(!script);
-				return done();
-			})
-		})
-	})
-	describe('loadStyle', function() {
-		it("should load a widgets style for the current skin if available", function(done) {
-			wtf.loadStyle("sample", "nifty", function(err, style) {
-				assert(!err);
-				expect(style).equal(".sample {\r\n\tcolor: yellow;\r\n\tbackground-color: black;\r\n\th2 { font-weight: bold; }\r\n}");
-				return done();
-			})
-		})
-		it("should load a widgets default style if one for the current skin isnt available", function(done) {
-			wtf.loadStyle("testStyles/hasDefaultStylesOnly", "nifty", function(err, style) {
-				assert(!err);
-				expect(style).equal("/* contents of testStyles/hasDefaultStylesOnly/styles.default.less */");
-				return done();
-			})
-		})
-		it("should gracefully return no styles (and an err) if neither stlye is available", function(done) {
-			wtf.loadStyle('testStyles/hasSkinnedStylesOnly', "non-existant-skin", function(err, style) {
-				assert(err);
-				assert(!style);
-				return done();
-			})
-		})
-	})
-	describe('buildJsFileUrl', function() {
-		it("should build the list in request.requiredScripts, if its already there", function(done) {
+	// describe('loadScript', function() {
+	// 	it("should load a widget's script if it is available", function(done) {
+	// 		wtf.loadScript('sample', function(err, script) {
+	// 			assert(!err);
+	// 			expect(script).equal("// this is a sample script.js");
+	// 			return done();
+	// 		})
+	// 	})
+	// 	it("should gracefully return no script if no script is available", function(done) {
+	// 		wtf.loadScript('testScript/hasNoScript', function(err, script) {
+	// 			//assert(err);
+	// 			assert(!script);
+	// 			return done();
+	// 		})
+	// 	})
+	// })
+	// describe('loadStyle', function() {
+	// 	it("should load a widgets style for the current skin if available", function(done) {
+	// 		wtf.loadStyle("sample", "nifty", function(err, style) {
+	// 			assert(!err);
+	// 			expect(style).equal(".sample {\r\n\tcolor: yellow;\r\n\tbackground-color: black;\r\n\th2 { font-weight: bold; }\r\n}");
+	// 			return done();
+	// 		})
+	// 	})
+	// 	it("should load a widgets default style if one for the current skin isnt available", function(done) {
+	// 		wtf.loadStyle("testStyles/hasDefaultStylesOnly", "nifty", function(err, style) {
+	// 			assert(!err);
+	// 			expect(style).equal("/* contents of testStyles/hasDefaultStylesOnly/styles.default.less */");
+	// 			return done();
+	// 		})
+	// 	})
+	// 	it("should gracefully return no styles (and an err) if neither stlye is available", function(done) {
+	// 		wtf.loadStyle('testStyles/hasSkinnedStylesOnly', "non-existant-skin", function(err, style) {
+	// 			assert(err);
+	// 			assert(!style);
+	// 			return done();
+	// 		})
+	// 	})
+	// })
+	describe('_buildJsFileUrl', function() {
+		it("should build jsUrl from scripts on widgets", function(done) {
 			var request = httpMocks.createRequest();
-			request.requiredScripts = [
-				{ widget: "some/widget", time: 123 },
-				{ widget: "another/widget", time: 1234 },
-				{ widget: "widget/3", time: 12356 },
-			]
-			var jsUrl = wtf.buildJsFileUrl(request);
-			assert(jsUrl == "/js/WyJzb21lL3dpZGdldCIsImFub3RoZXIvd2lkZ2V0Iiwid2lkZ2V0LzMiXQ%3D%3D.js?ver=12356");
-			return done();
-		})
-		it("should build request.requiredScripts from widgets[].scrits if it isnt there", function(done) {
-			var request = httpMocks.createRequest();
-			request.widgets = {
+			request.page = new Page();
+			request.page.widgets = {
 				widget1: {
 					name: "some/widget",
 					scripts: [
@@ -732,39 +726,30 @@ describe("Widgets, the Framework", function() {
 					// conveniently has no scriptss
 				}
 			}
-			var jsUrl = wtf.buildJsFileUrl(request);
+			var jsUrl = wtf._buildJsFileUrl(request);
 			assert(jsUrl == "/js/WyJzb21lL3dpZGdldCIsImFub3RoZXIvd2lkZ2V0Iiwid2lkZ2V0LzMiXQ%3D%3D.js?ver=12356");
 			return done();
 		})
 		it("should return falsy if there are no required scripts", function(done) {
 			var request = httpMocks.createRequest();
-			request.widgets = {
+			request.page = new Page();
+			request.page.widgets = {
 				widget1: {
 					name: "some/widget",
 					scripts: [],
 				},
 				widget2: { name: "widget/3" },
 			}
-			var jsUrl = wtf.buildJsFileUrl(request);
+			var jsUrl = wtf._buildJsFileUrl(request);
 			assert(!jsUrl);
 			return done();
 		})
 	})
-	describe('buildCssFileUrl', function() {
-		it("should build the list in request.requiredStyles, if its already there", function(done) {
+	describe('_buildCssFileUrl', function() {
+		it("should build requiredStyles from widgets[].styles", function(done) {
 			var request = httpMocks.createRequest();
-			request.requiredStyles = [
-				{ widget: "some/widget", time: 123 },
-				{ widget: "another/widget", time: 1234 },
-				{ widget: "widget/3", time: 12356 },
-			]
-			var url = wtf.buildCssFileUrl(request);
-			expect(url).equal("/css/eyJ0IjoiZGVmYXVsdCIsInciOlsic29tZS93aWRnZXQiLCJhbm90aGVyL3dpZGdldCIsIndpZGdldC8zIl19.css?ver=12356");
-			return done();
-		})
-		it("should build request.requiredStyles from widgets[].styles if it isnt there", function(done) {
-			var request = httpMocks.createRequest();
-			request.widgets = {
+			request.page = new Page();
+			request.page.widgets = {
 				widget1: {
 					name: "some/widget",
 					styles: [
@@ -783,20 +768,21 @@ describe("Widgets, the Framework", function() {
 					// conveniently has no styles
 				}
 			}
-			var url = wtf.buildCssFileUrl(request);
+			var url = wtf._buildCssFileUrl(request);
 			expect(url).equal("/css/eyJ0IjoiZGVmYXVsdCIsInciOlsic29tZS93aWRnZXQiLCJhbm90aGVyL3dpZGdldCIsIndpZGdldC8zIl19.css?ver=12356");
 			return done();
 		})
 		it("should return falsy if there are no required scripts", function(done) {
 			var request = httpMocks.createRequest();
-			request.widgets = {
+			request.page = new Page();
+			request.page.widgets = {
 				widget1: {
 					name: "some/widget",
 					scripts: [],
 				},
 				widget2: { name: "widget/3" },
 			}
-			var jsUrl = wtf.buildJsFileUrl(request);
+			var jsUrl = wtf._buildJsFileUrl(request);
 			assert(!jsUrl);
 			return done();
 		})
@@ -902,32 +888,33 @@ describe("Widgets, the Framework", function() {
 			var request = httpMocks.createRequest();
 			var response = httpMocks.createResponse();
 			wtf.initLogs(request, response, function(err) {
-				expect(typeof request.logs).equal("object");
-				expect(typeof request.logError).equal("function");
-				expect(typeof request.logWarning).equal("function");
-				expect(typeof request.logInfo).equal("function");
-				expect(typeof request.startTimer).equal("function");
-				expect(typeof request.endTimer).equal("function");
-				expect(typeof request.getErrors).equal("function");
-				expect(typeof request.getWarnings).equal("function");
-				expect(typeof request.getInfos).equal("function");
-				expect(typeof request.getTimers).equal("function");
-				request.logError("an error occured");
-				request.logWarning("danger, danger!");
-				request.logInfo("some stuff");
-				request.startTimer("testTimer", "doing some stuff");
-				request.endTimer("testTimer");
-				request.startTimer("brokenTimer", "this wont be closed properly");
-				request.endTimer("broke_timr");
-				expect(request.logs.length).equal(6);
+				expect(typeof request.log).equal("object");
+				// expect(typeof request.logError).equal("function");
+				// expect(typeof request.logWarning).equal("function");
+				// expect(typeof request.logInfo).equal("function");
+				// expect(typeof request.startTimer).equal("function");
+				// expect(typeof request.endTimer).equal("function");
+				// expect(typeof request.getErrors).equal("function");
+				// expect(typeof request.getWarnings).equal("function");
+				// expect(typeof request.getInfos).equal("function");
+				// expect(typeof request.getTimers).equal("function");
+				request.log.error("an error occured");
+				request.log.warning("danger, danger!");
+				request.log.info("some stuff");
+				//request.log.startTimer("testTimer", "doing some stuff");
+				//request.log.endTimer("testTimer");
+				//request.log.startTimer("brokenTimer", "this wont be closed properly");
+				//request.log.endTimer("broke_timr");
+				//expect(request.logs.length).equal(6);
+				expect(request.log.events.length).equal(3);
 				//there hsould be 2 errors (the one we added, and the one from broken timer)
-				expect(request.getErrors().length).equal(2);
+				//expect(request.getErrors().length).equal(2);
 				//there should be a warning
-				expect(request.getWarnings().length).equal(1);
+				//expect(request.getWarnings().length).equal(1);
 				//there should be an info
-				expect(request.getInfos().length).equal(1);
+				//expect(request.getInfos().length).equal(1);
 				//there should be 2 timers (one with an end time, and one with no end time)
-				expect(request.getTimers().length).equal(2);
+				//expect(request.getTimers().length).equal(2);
 
 				request.clearTimeout();
 				return done();
@@ -1040,11 +1027,8 @@ describe("Widgets, the Framework", function() {
 			var response = httpMocks.createResponse();
 			wtf.initLogs(request, response, function() {
 				request.route = wtf.routes.homePage;
-				request.ux = "eyJ0IjoiZGVmYXVsdCIsInciOlsic29tZS93aWRnZXQiLCJhbm90aGVyL3dpZGdldCIsIndpZGdldC8zIl19";
-				request.responseHeaders = {};
 				wtf.dynamicCss(request, response, function() {
-					assert(!request.responseBody);
-					expect(request.responseHeaders['Content-Type']).not.equal("text/css");
+					assert(!request.page);
 					request.clearTimeout();
 					return done();
 				})
@@ -1056,10 +1040,10 @@ describe("Widgets, the Framework", function() {
 			wtf.initLogs(request, response, function() {
 				request.route = wtf.routes.cssRoute;
 				request.ux = "eyJ0IjoiZGVmYXVsdCIsInciOlsic29tZS93aWRnZXQiLCJhbm90aGVyL3dpZGdldCIsIndpZGdldC8zIl19";
-				request.responseHeaders = {};
 				wtf.dynamicCss(request, response, function() {
-					assert(request.responseBody);
-					expect(request.responseHeaders['Content-Type']).equal("text/css");
+					assert(request.page);
+					assert(request.page.body);
+					expect(request.page.headers['Content-Type']).equal("text/css");
 					request.clearTimeout();
 					return done();
 				})
@@ -1072,10 +1056,8 @@ describe("Widgets, the Framework", function() {
 			var response = httpMocks.createResponse();
 			wtf.initLogs(request, response, function() {
 				request.route = wtf.routes.homePage;
-				request.responseHeaders = {};
 				wtf.dynamicJs(request, response, function() {
-					assert(!request.responseBody);
-					expect(request.responseHeaders['Content-Type']).not.equal("application/javascript");
+					assert(!request.page)
 					request.clearTimeout();
 					return done();
 				})
@@ -1085,12 +1067,12 @@ describe("Widgets, the Framework", function() {
 			var request = httpMocks.createRequest();
 			var response = httpMocks.createResponse();
 			wtf.initLogs(request, response, function() {
-				request.route = wtf.routes.jsRoute;
+				request.action = wtf.routes.jsRoute.action;
 				request.ux = "WyJqcy9qb2VzVGVtcGxhdGVzIiwianMvbWVzc2FnaW5nIiwianMvbWVzc2FnaW5nL2Zvcm1zIiwianMvcXVpY2tTZWFyY2giLCJqcy9vdmVyZmxvd0NsYXNzIl0%3D";
-				request.responseHeaders = {};
 				wtf.dynamicJs(request, response, function() {
-					assert(request.responseBody);
-					expect(request.responseHeaders['Content-Type']).equal("application/javascript");
+					assert(request.page);
+					assert(request.page.body);
+					expect(request.page.headers['Content-Type']).equal("application/javascript");
 					request.clearTimeout();
 					return done();
 				})
@@ -1162,18 +1144,19 @@ describe("Widgets, the Framework", function() {
 					wtf.prepareResponse(request, response, function(err) {
 						assert(!err);
 						// load correct action/ux config
-						expect(request.wireframe).equal('default');
-						expect(request.pageTitle).equal('special home page');
-						expect(request.skin).equal('nifty');
-						expect(Object.keys(request.widgetBlocks).length).equal(5);
-						expect(request.widgetBlocks.center.length).equal(1);
-						expect(Object.keys(request.widgets).length).equal(3);
+						assert(request.page);
+						expect(request.page.wireframe).equal('default');
+						expect(request.page.title).equal('special home page');
+						expect(request.page.skin).equal('nifty');
+						expect(Object.keys(request.page.widgetBlocks).length).equal(5);
+						expect(request.page.widgetBlocks.center.length).equal(1);
+						expect(Object.keys(request.page.widgets).length).equal(3);
 						return done();
 					});
 				})
 			})
 			it("should prepare the sample widget correctly", function(done) {
-				var widget = request.widgets.firstContent;
+				var widget = request.page.widgets.firstContent;
 				expect(typeof widget).equal("object");
 				expect(widget.name).equal("sample");
 				expect(widget.configs.heading).equal("widget 5");
@@ -1183,38 +1166,46 @@ describe("Widgets, the Framework", function() {
 				expect(widget.scripts.length).equal(1);
 				expect(widget.styles.length).equal(1);
 				expect(widget.html).equal('<div class="widget sample jsph">\r\n\r\n\t<h2 class="widgetHeader">widget 5\r\n\r\n\t<div class="widgetContent">this is a special page</div>\r\n\r\n\t<div class="widgetFooter">override</div>\r\n');
-				expect(widget.errors.length).equal(0);
+				var errors = widget.log.getErrors();
+				if (errors.length) console.log(errors);
+				expect(errors.length).equal(0);
 				return done();
 			})
 			it("should handle noRender correctly", function(done) {
-				var widget = request.widgets.iDontRender;
+				var widget = request.page.widgets.iDontRender;
 				expect(typeof widget).equal("object");
 				expect(widget.name).equal("testLogic/alwaysNoRender");
 				expect(widget.noRender).equal(true);
 				expect(widget.scripts.length).equal(0);
 				expect(widget.styles.length).equal(0);
 				expect(widget.html).equal('');
-				expect(widget.errors.length).equal(0);
+				var errors = widget.log.getErrors();
+				if (errors.length) console.log(errors);
+				expect(errors.length).equal(0);
 				return done();
 			})
 			it("should find the right dependency scripts", function(done) {
-				var widget = request.widgets.reqSomeScripts;
+				var widget = request.page.widgets.reqSomeScripts;
 				expect(typeof widget).equal("object");
 				expect(widget.name).equal('testScript/hasMultipleDependencies');
 				expect(widget.scripts.length).equal(3);
 				expect(widget.styles.length).equal(0);
 				expect(widget.html).equal('');
+				var errors = widget.log.getErrors();
+				if (errors.length) console.log(errors);
+				expect(errors.length).equal(0);
 				return done();
 			})
 			it.skip("should produce an error widget for widgets that caused errors", function(done) {
 
 			})
 			it("should fill html output for correct wireframe/widgets/etc", function(done) {
-				expect(request.cssFileUrl).match(/^\/css\/eyJ0IjoibmlmdHkiLCJ3IjpbInNhbXBsZSJdfQ\%3D\%3D\.css\?ver\=\d+$/);
-				expect(request.jsFileUrl).match(/^\/js\/WyJzYW1wbGUiLCJ0ZXN0U2NyaXB0L2hhc1NjcmlwdE5vRGVwZW5kZW5jeSIsInRlc3RTY3JpcHQvaGFzTXVsdGlwbGVEZXBlbmRlbmNpZXMiXQ\%3D\%3D\.js\?ver\=\d+$/);
-				expect(request.responseStatusCode).equal(200);
-				expect(request.responseType).equal('text/html');
-				expect(request.responseBody).equal('<!DOCTYPE html>\n<html>\n  <head>\n    <title></title>\n    <link rel="stylesheet/less" type="text/css" href="/css/eyJ0IjoibmlmdHkiLCJ3IjpbInNhbXBsZSJdfQ%3D%3D.css?ver=1394021765000">\n  </head>\n  <body>\n    <div class="pageContainer">\n      <div class="pageHeader">\n      </div>\n      <div class="pageMiddle">\n        <div class="pageCenter"><div class="widget sample jsph">\r\n\r\n\t<h2 class="widgetHeader">widget 5\r\n\r\n\t<div class="widgetContent">this is a special page</div>\r\n\r\n\t<div class="widgetFooter">override</div>\r\n\n        </div>\n      </div>\n    </div>\n    <script src="/js/WyJzYW1wbGUiLCJ0ZXN0U2NyaXB0L2hhc1NjcmlwdE5vRGVwZW5kZW5jeSIsInRlc3RTY3JpcHQvaGFzTXVsdGlwbGVEZXBlbmRlbmNpZXMiXQ%3D%3D.js?ver=1394226295000"></script>\n  </body>\n</html>');
+				expect(request.page.cssUrl).match(/^\/css\/eyJ0IjoiZGVmYXVsdCIsInciOlsic2FtcGxlIl19.css\?ver\=\d+$/);
+				expect(request.page.jsUrl).match(/^\/js\/WyJzYW1wbGUiLCJ0ZXN0U2NyaXB0L2hhc1NjcmlwdE5vRGVwZW5kZW5jeSIsInRlc3RTY3JpcHQvaGFzTXVsdGlwbGVEZXBlbmRlbmNpZXMiXQ\%3D\%3D\.js\?ver\=\d+$/);
+
+				expect(request.page.statusCode).equal(200);
+				expect(request.page.headers['Content-Type']).equals('text/html');
+				expect(request.page.body).equal("<!DOCTYPE html>\n<html>\n  <head>\n    <title>special home page</title>\n    <link rel=\"stylesheet/less\" type=\"text/css\" href=\"/css/eyJ0IjoiZGVmYXVsdCIsInciOlsic2FtcGxlIl19.css?ver=1394021765000\">\n  </head>\n  <body>\n    <div class=\"pageContainer\">\n      <div class=\"pageHeader\">\n      </div>\n      <div class=\"pageMiddle\">\n        <div class=\"pageCenter\"><div class=\"widget sample jsph\">\r\n\r\n\t<h2 class=\"widgetHeader\">widget 5\r\n\r\n\t<div class=\"widgetContent\">this is a special page</div>\r\n\r\n\t<div class=\"widgetFooter\">override</div>\r\n\n        </div>\n      </div>\n    </div>\n    <script src=\"/js/WyJzYW1wbGUiLCJ0ZXN0U2NyaXB0L2hhc1NjcmlwdE5vRGVwZW5kZW5jeSIsInRlc3RTY3JpcHQvaGFzTXVsdGlwbGVEZXBlbmRlbmNpZXMiXQ%3D%3D.js?ver=1394226295000\"></script>\n  </body>\n</html>");
 				return done();
 			})
 			it.skip("should not overwrite predefined status codes", function(done) {
@@ -1234,10 +1225,11 @@ describe("Widgets, the Framework", function() {
 		it("should send body and headers as prepared", function(done) {
 			var request = httpMocks.createRequest();
 			var response = httpMocks.createResponse();
-			request.responseBody = "some stuff";
+			request.page = new Page();
+			request.page.body = "some stuff";
 			wtf.initLogs(request, response, function(err) {
 				assert(!err);
-				wtf.sendResponse(request, response, function(err) {
+				wtf._sendResponse(request, response, function(err) {
 					assert(!err);
 					expect(response.statusCode).equal(200);
 					expect(response._isEndCalled()).equal(true);
@@ -1279,7 +1271,7 @@ describe("Widgets, the Framework", function() {
 									assert(!err);
 									wtf.prepareResponse(request, response, function(err) {
 										assert(!err);
-										wtf.sendResponse(request, response, function(err) {
+										wtf._sendResponse(request, response, function(err) {
 											assert(!err);
 											wtf.logRequest(request, response, function(err) {
 												assert(!err);

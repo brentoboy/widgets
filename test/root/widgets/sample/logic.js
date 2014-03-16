@@ -1,4 +1,4 @@
-exports.prepare = function(widget, done) {
+exports.prepare = function(widget, page, done) {
 
 	if (!widget.configs.content) {
 		widget.configs.content = "Here is the content you requested."

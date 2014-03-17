@@ -51,6 +51,12 @@ var wtf = {
 				action: "_js",
 			}
 		}
+		if (!routes.widgetRoute) {
+			routes.widgetRoute = {
+				pattern: "/widget/(string:theWidget)",
+				action: "widget",
+			}
+		}
 
 		for(routeKey in routes) {
 			var route = routes[routeKey]
@@ -151,6 +157,98 @@ var wtf = {
 		var bigOleString = JSON.stringify(list);
 		bigOleString = (new Buffer(bigOleString)).toString('base64');
 		return wtf.routes.cssRoute.getUrl({ ux: bigOleString }) + "?ver=" + max;
+	},
+
+	_loadActionUxConfig: function(page, action, ux, callback) {
+		if (!action || !ux) {
+			return callback("Unspecified Action:Ux '" + action + "':'" + ux + "'");
+		}
+		var uxFile = wtf.paths.ux(action, ux);
+		var uxConfigs = null;
+		wtf.fsCache.readFile(uxFile, "utf8", function(err, data) {
+			page.log.error(err);
+			if (!data) {
+				return callback("uxFile empty or doesn't exist: " + uxFile);
+			}
+			// eval it
+			try {
+				uxConfigs = eval("(" + data + ")")
+			}
+			catch (err) {
+				page.log.error(err);
+				return callback("uxFile doesn't parse as valid JSON: " + uxFile);
+			}
+			// load_parent
+			var extendAction = action;
+			var extendUx = null;
+			if (uxConfigs.extends) {
+				var parts = uxConfigs.extends.split(":");
+				switch (parts.length) {
+					case 2:
+						extendAction = parts[0];
+						extendUx = parts[1];
+						break;
+					case 1:
+						extendUx = parts[0];
+						break;
+					default:
+						page.log.warning("extends contains too many : characters. '" + uxConfigs.extends + "'");
+						break;
+				}
+			}
+			wtf._loadActionUxConfig(page, extendAction, extendUx, function(err) {
+				// widgetBlocks get extened
+				if (uxConfigs.widgetBlocks) {
+					for(var key in uxConfigs.widgetBlocks) {
+						var block = uxConfigs.widgetBlocks[key];
+						if (page.widgetBlocks[key]) {
+							// append them to the existing block
+							for(var x in block) {
+								page.widgetBlocks[key].push(block[x]);
+							}
+						}
+						else { // just use this for that block
+							page.widgetBlocks[key] = block;
+						}
+					}
+				}
+
+				// widgets overright widgets with the same id
+				if (uxConfigs.replaceWidgets) {
+					for (var i in uxConfigs.replaceWidgets) {
+						var replacementWidget = uxConfigs.replaceWidgets[i];
+						for (var key in page.widgetBlocks) {
+							var block = page.widgetBlocks[key];
+							for (var x in block) {
+								var widget = block[x];
+								if (widget.id == replacementWidget.id) {
+									block[x] = replacementWidget;
+								}
+							}
+						}
+					}
+				}
+
+				// now, all other properties just port across
+				for(var key in uxConfigs) {
+					if (key != "replaceWidgets" && key != "widgetBlocks") {
+						if (typeof page[key] == "array") {
+							page[key] = page[key].concat(uxConfigs[key]);
+						}
+						else if (page[key] && typeof page[key] == "object") {
+							// merge the objects
+							for (var i in uxConfigs[key]) {
+								page[key][i] = uxConfigs[key][i]
+							}
+						}
+						else { // just overwrte it
+							page[key] = uxConfigs[key];
+						}
+					}
+				}
+				return callback();
+			})
+		})
 	},
 
 	_loadWidgetConfig: function(widgetName, callback) {
@@ -503,7 +601,7 @@ var wtf = {
 			return next();
 		}
 		request.ux = getUx(request);
-		request.page = new Page(request.action, request.ux, null);
+		request.page = new Page(request.log, request.action, request.ux, null);
 
 		var styleInfo;
 		var base64String = decodeURIComponent(request.ux);
@@ -612,7 +710,7 @@ var wtf = {
 			return next();
 		}
 		request.ux = getUx(request);
-		request.page = new Page(request.action, request.ux, null);
+		request.page = new Page(request.log, request.action, request.ux, null);
 
 		var requiredScripts;
 		var base64String = decodeURIComponent(getUx(request));
@@ -691,42 +789,24 @@ var wtf = {
 		var uxJson;
 		var loadWidgets = {};
 		var renderWidgets = {};
+		request.page = new Page(request.log, request.action, request.ux);
 
 		async.series([
 			// load the action/ux config file
 			function(done) {
 				request.log.info("load Action/Ux config");
-				var uxFile = wtf.paths.ux(request.action, request.ux);
-				var defaultUxFile = wtf.paths.ux(request.action);
-				wtf.fsCache.readFile(uxFile, "utf8", function(err, data) {
+				wtf._loadActionUxConfig(request.page, request.action, request.ux, function(err) {
 					request.log.error(err);
-					if (data) {
-						uxJson = data;
-						return done();
+					if (err) {
+						request.log.warning("defaulting to default UX for this action: " + request.action);
+						wtf._loadActionUxConfig(request.page, request.action, "default", function(err) {
+							request.log.error(err);
+							return done();
+						})
+						return;
 					}
-					request.log.warn(uxFile + " not found, defaulting to " + defaultUxFile);
-					wtf.fsCache.readFile(defaultUxFile, "utf8", function(err, data) {
-						request.log.error(err);
-						uxJson = data;
-						return done();
-					})
+					return done()
 				})
-			},
-
-			// copy details of action/ux to request object
-			function(done) {
-				request.log.info("copy details to request");
-				var uxConfigs = null;
-				if (uxJson) {
-					try {
-						uxConfigs = eval("(" + uxJson + ")");
-					}
-					catch (err) {
-						request.log.error(err);
-					}
-				}
-				request.page = new Page(request.action, request.ux, uxConfigs);
-				return done();
 			},
 
 			// create the widgets, and create functions that will prepare each one
@@ -737,6 +817,10 @@ var wtf = {
 					for (var widgetIndex in block) {
 						var widgetConfigs = block[widgetIndex];
 						widgetConfigs.id = widgetConfigs.id || (blockIndex + "-" + widgetIndex);
+
+						if (widgetConfigs.id == "theWidget" && request.page.action == "widget") {
+							widgetConfigs.widget = request.params["theWidget"];
+						}
 
 						var newWidget = new Widget(
 							widgetConfigs.widget

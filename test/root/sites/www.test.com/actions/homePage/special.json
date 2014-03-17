@@ -1,6 +1,5 @@
 {
-	"type": "html",
-	"wireframe": "default",
+	"extends": "homePage:default",
 	"skin": "nifty",
 	"title": "special home page",
 	"widgetBlocks": {
@@ -16,19 +15,15 @@
 				"widget": "testLogic/alwaysNoRender",
 			},
 		],
-		"left": [
-		],
-		"center": [
-			{
-				"id": "firstContent",
-				"widget": "sample",
-				"configs": {
-					"heading": "widget 5",
-					"content": "this is a special page"
-				}
-			},
-		],
-		"footer": [
-		]
-	}
+	},
+	"replaceWidgets": [
+		{
+			"id": "firstContent",
+			"widget": "sample",
+			"configs": {
+				"heading": "widget 5",
+				"content": "this is a special page"
+			}
+		}
+	]
 }

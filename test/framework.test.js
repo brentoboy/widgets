@@ -1250,6 +1250,51 @@ describe("Widgets, the Framework", function() {
 			})
 		})
 	})
+	describe("widget Route", function() {
+		it("should load sample widget", function(done) {
+			var request = httpMocks.createRequest({
+				method: 'GET',
+				url: '/widget/sample',
+			})
+			var response = httpMocks.createResponse();
+			wtf.initLogs(request, response, function(err) {
+				assert(!err);
+				wtf.chooseRoute(request, response, function(err) {
+					assert(!err);
+					expect(request.route).equal(wtf.routes.widgetRoute);
+					wtf.extractParams(request, response, function(err) {
+						assert(!err);
+						expect(request.params['theWidget']).equal("sample");
+						wtf.dynamicCss(request, response, function(err) {
+							assert(!err);
+							wtf.dynamicJs(request, response, function(err) {
+								assert(!err);
+								wtf.chooseActionUx(request, response, function(err) {
+									assert(!err);
+									expect(request.action).equal("widget");
+									expect(request.ux).equal("default");
+									wtf.prepareResponse(request, response, function(err) {
+										assert(!err);
+										assert(request.page.widgets.theWidget);
+										expect(request.page.widgets.theWidget.name).equal("sample");
+										assert(request.page.widgets.theWidget.html);
+										assert(request.page.body);
+										wtf._sendResponse(request, response, function(err) {
+											assert(!err);
+											wtf.logRequest(request, response, function(err) {
+												assert(!err);
+												return done();
+											})
+										})
+									})
+								})
+							})
+						})
+					})
+				})
+			})
+		})
+	})
 	describe("logRequest", function() {
 		it("should, do some kind of logging", function(done) {
 			var request = httpMocks.createRequest({

@@ -5,17 +5,17 @@ var paths = {};
 paths.base = wtf.options.root;
 paths.site = path.join(paths.base, 'sites', wtf.options.site);
 paths.static = path.join(paths.site, 'static');
-paths.models = path.join(paths.base, 'models');
+paths.libraries = path.join(paths.base, 'libraries');
 paths.actions = path.join(paths.site, 'actions');
 paths.widgets = path.join(paths.base, 'widgets');
-paths.dataSources = path.join(paths.base, 'dataSources');
 paths.wireframes = path.join(paths.site, 'wireframes');
 paths.skins = path.join(paths.site, 'skins');
 
-paths.model = function(modelName) {
+paths.library = function(libraryName) {
 	return path.join(
-		paths.models
-		, modelName + ((/\.js$/).test(modelName) ? "" : ".js")
+		paths.libraries
+		, libraryName
+		, "api.js"
 	);
 }
 

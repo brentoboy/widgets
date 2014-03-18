@@ -31,15 +31,13 @@ describe("Widgets, the Framework", function() {
 			assert(pathsMatch(paths.base, "{root}"));
 			assert(pathsMatch(paths.site, "{root}/sites/www.test.com"));
 			assert(pathsMatch(paths.static, "{root}/sites/www.test.com/static"));
-			assert(pathsMatch(paths.models, "{root}/models"));
+			assert(pathsMatch(paths.libraries, "{root}/libraries"));
 			assert(pathsMatch(paths.actions, "{root}/sites/www.test.com/actions"));
 			assert(pathsMatch(paths.widgets, "{root}/widgets"));
 			assert(pathsMatch(paths.wireframes, "{root}/sites/www.test.com/wireframes"));
-			assert(pathsMatch(paths.dataSources, "{root}/dataSources"));
 			assert(pathsMatch(paths.skins, "{root}/sites/www.test.com/skins"));
-			assert(pathsMatch(paths.model("test"), "{root}/models/test.js"));
-			assert(pathsMatch(paths.model("xyz/test"), "{root}/models/xyz/test.js"));
-			assert(pathsMatch(paths.model("xyz/test"), "{root}/models/xyz/test.js"));
+			assert(pathsMatch(paths.library("test"), "{root}/libraries/test/api.js"));
+			assert(pathsMatch(paths.library("xyz/test"), "{root}/libraries/xyz/test/api.js"));
 			assert(pathsMatch(paths.widget("abc/widget"), "{root}/widgets/abc/widget"));
 			assert(pathsMatch(paths.widget("widget/one"), "{root}/widgets/widget/one"));
 			assert(pathsMatch(paths.widgetLogic("widget1"), "{root}/widgets/widget1/logic.js"));
@@ -58,8 +56,6 @@ describe("Widgets, the Framework", function() {
 			assert(pathsMatch(paths.wireframeJade("short/fat"), "{root}/sites/www.test.com/wireframes/short/fat.jade"));
 			assert(pathsMatch(paths.wireframeJsph("tallSkinny"), "{root}/sites/www.test.com/wireframes/tallSkinny.jsph"));
 			assert(pathsMatch(paths.wireframeJsph("short/fat"), "{root}/sites/www.test.com/wireframes/short/fat.jsph"));
-			assert(pathsMatch(paths.dataSource("random-database"), "{root}/dataSources/random-database.js"));
-			assert(pathsMatch(paths.dataSource("games/data.js"), "{root}/dataSources/games/data.js"));
 			return done();
 		})
 		it("should have set up the routes", function(done) {
@@ -77,8 +73,8 @@ describe("Widgets, the Framework", function() {
 			expect(route.getUrl({junk:"stuff"})).equal("/");
 			expect(wtf._findRoute("/")).equals(route);
 
-			// jsRoute
-			route = wtf.routes.jsRoute;
+			// _js
+			route = wtf.routes._js;
 			assert(route);
 			expect(route.pattern).equal("/js/(string:ux).js");
 			expect(route.action).equal("_js");
@@ -93,8 +89,8 @@ describe("Widgets, the Framework", function() {
 			expect(route.getUrl({ux:"bla-bla-bla"})).equal("/js/bla-bla-bla.js");
 			expect(wtf._findRoute("/js/abc-123.js")).equal(route);
 
-			// cssRoute
-			route = wtf.routes.cssRoute;
+			// _css
+			route = wtf.routes._css;
 			assert(route);
 			expect(route.pattern).equal("/css/(string:ux).css");
 			expect(route.action).equal("_css");
@@ -1038,7 +1034,7 @@ describe("Widgets, the Framework", function() {
 			var request = httpMocks.createRequest();
 			var response = httpMocks.createResponse();
 			wtf.initLogs(request, response, function() {
-				request.route = wtf.routes.cssRoute;
+				request.route = wtf.routes._css;
 				request.ux = "eyJ0IjoiZGVmYXVsdCIsInciOlsic29tZS93aWRnZXQiLCJhbm90aGVyL3dpZGdldCIsIndpZGdldC8zIl19";
 				wtf.dynamicCss(request, response, function() {
 					assert(request.page);
@@ -1067,7 +1063,7 @@ describe("Widgets, the Framework", function() {
 			var request = httpMocks.createRequest();
 			var response = httpMocks.createResponse();
 			wtf.initLogs(request, response, function() {
-				request.action = wtf.routes.jsRoute.action;
+				request.action = wtf.routes._js.action;
 				request.ux = "WyJqcy9qb2VzVGVtcGxhdGVzIiwianMvbWVzc2FnaW5nIiwianMvbWVzc2FnaW5nL2Zvcm1zIiwianMvcXVpY2tTZWFyY2giLCJqcy9vdmVyZmxvd0NsYXNzIl0%3D";
 				wtf.dynamicJs(request, response, function() {
 					assert(request.page);
@@ -1120,7 +1116,7 @@ describe("Widgets, the Framework", function() {
 				assert(!err);
 				wtf.chooseActionUx(request, response, function(err) {
 					assert(!err);
-					expect(request.action).equal("404");
+					expect(request.action).equal("_404");
 					expect(request.ux).equal("default");
 					request.clearTimeout();
 					return done();
@@ -1261,7 +1257,7 @@ describe("Widgets, the Framework", function() {
 				assert(!err);
 				wtf.chooseRoute(request, response, function(err) {
 					assert(!err);
-					expect(request.route).equal(wtf.routes.widgetRoute);
+					expect(request.route).equal(wtf.routes._widget);
 					wtf.extractParams(request, response, function(err) {
 						assert(!err);
 						expect(request.params['theWidget']).equal("sample");
@@ -1271,7 +1267,7 @@ describe("Widgets, the Framework", function() {
 								assert(!err);
 								wtf.chooseActionUx(request, response, function(err) {
 									assert(!err);
-									expect(request.action).equal("widget");
+									expect(request.action).equal("_widget");
 									expect(request.ux).equal("default");
 									wtf.prepareResponse(request, response, function(err) {
 										assert(!err);

@@ -31,34 +31,31 @@ var wtf = {
 
 		wtf.fsCache = new FsCache(function() {
 			wtf._loadRoutes();
-			return done();
+			if (typeof done == "function") {
+				return done();
+			}
 		});
+	},
+
+	requireLibrary: function(libraryName) {
+		return require(wtf.paths.library(libraryName));
 	},
 
 	_loadRoutes: function() {
 		var routePath = path.join(wtf.paths.site, "routes.js");
 		var routes = require(routePath);
 
-		if (!routes.cssRoute) {
-			routes.cssRoute = {
-				pattern: "/css/(string:ux).css",
-				action: "_css",
-			}
-		}
-		if (!routes.jsRoute) {
-			routes.jsRoute = {
-				pattern: "/js/(string:ux).js",
-				action: "_js",
-			}
-		}
-		if (!routes.widgetRoute) {
-			routes.widgetRoute = {
-				pattern: "/widget/(string:theWidget)",
-				action: "widget",
-			}
-		}
+		routes._css = routes._css || "/css/(string:ux).css";
+		routes._js = routes._js || "/js/(string:ux).js";
+		routes._widget = routes._widget || "/widget/(string:theWidget)";
 
 		for(routeKey in routes) {
+			if (typeof routes[routeKey] == "string") {
+				routes[routeKey] = {
+					action: routeKey,
+					pattern: routes[routeKey],
+				}
+			}
 			var route = routes[routeKey]
 
 			// if they defined a pattern instead of a regex, make a regex out of it
@@ -79,7 +76,7 @@ var wtf = {
 		if (!routes._404) {
 			routes._404 = {
 				regex: null,
-				action: "404",
+				action: "_404",
 				getUrl: function() {},
 				scrape: function() {},
 			}
@@ -128,7 +125,7 @@ var wtf = {
 
 		var bigOleString = JSON.stringify(list);
 		bigOleString = (new Buffer(bigOleString)).toString('base64');
-		return wtf.routes.jsRoute.getUrl({ ux: bigOleString }) + "?ver=" + max;
+		return wtf.routes._js.getUrl({ ux: bigOleString }) + "?ver=" + max;
 	},
 
 	_buildCssFileUrl: function(request) {
@@ -137,7 +134,7 @@ var wtf = {
 			for (var i in request.page.widgets) {
 				var widget = request.page.widgets[i];
 				for (var j in widget.styles) {
-					requiredStyles[widget.styles[j].widget] = widget.styles[j];
+				requiredStyles[widget.styles[j].widget] = widget.styles[j];
 				}
 			}
 		}
@@ -156,7 +153,7 @@ var wtf = {
 		}
 		var bigOleString = JSON.stringify(list);
 		bigOleString = (new Buffer(bigOleString)).toString('base64');
-		return wtf.routes.cssRoute.getUrl({ ux: bigOleString }) + "?ver=" + max;
+		return wtf.routes._css.getUrl({ ux: bigOleString }) + "?ver=" + max;
 	},
 
 	_loadActionUxConfig: function(page, action, ux, callback) {
@@ -818,7 +815,7 @@ var wtf = {
 						var widgetConfigs = block[widgetIndex];
 						widgetConfigs.id = widgetConfigs.id || (blockIndex + "-" + widgetIndex);
 
-						if (widgetConfigs.id == "theWidget" && request.page.action == "widget") {
+						if (widgetConfigs.id == "theWidget" && request.page.action == "_widget") {
 							widgetConfigs.widget = request.params["theWidget"];
 						}
 

@@ -9,7 +9,7 @@ var Widget = require('../src/widget.js');
 var Page = require('../src/page.js');
 
 var testSite = {
-	root: __dirname + "/root",
+	root: __dirname + "/../sample",
 	site: "www.test.com",
 	config: "test",
 	watchr: false,
@@ -25,37 +25,38 @@ describe("Widgets, the Framework", function() {
 	describe("init", function() {
 		it("should have set up the paths", function(done) {
 			var paths = wtf.paths;
-			var pathsMatch = function(path1, path2) {
-				return (path1.replace(/\\/g, "/") == path2.replace("{root}", testSite.root).replace(/\\/g, "/"));
+			var expectPathsMatch = function(path1, path2) {
+				expect(path1.replace(/\\/g, "/").replace("test/../", ""))
+				.equal(path2.replace("{root}", testSite.root).replace(/\\/g, "/").replace("test/../", ""));
 			}
-			assert(pathsMatch(paths.base, "{root}"));
-			assert(pathsMatch(paths.site, "{root}/sites/www.test.com"));
-			assert(pathsMatch(paths.static, "{root}/sites/www.test.com/static"));
-			assert(pathsMatch(paths.libraries, "{root}/libraries"));
-			assert(pathsMatch(paths.actions, "{root}/sites/www.test.com/actions"));
-			assert(pathsMatch(paths.widgets, "{root}/widgets"));
-			assert(pathsMatch(paths.wireframes, "{root}/sites/www.test.com/wireframes"));
-			assert(pathsMatch(paths.skins, "{root}/sites/www.test.com/skins"));
-			assert(pathsMatch(paths.library("test"), "{root}/libraries/test/api.js"));
-			assert(pathsMatch(paths.library("xyz/test"), "{root}/libraries/xyz/test/api.js"));
-			assert(pathsMatch(paths.widget("abc/widget"), "{root}/widgets/abc/widget"));
-			assert(pathsMatch(paths.widget("widget/one"), "{root}/widgets/widget/one"));
-			assert(pathsMatch(paths.widgetLogic("widget1"), "{root}/widgets/widget1/logic.js"));
-			assert(pathsMatch(paths.widgetJade("wid/get/xyz"), "{root}/widgets/wid/get/xyz/view.jade"));
-			assert(pathsMatch(paths.widgetJsph("wid/get/xyz"), "{root}/widgets/wid/get/xyz/view.jsph"));
-			assert(pathsMatch(paths.widgetStaticHtml("123"), "{root}/widgets/123/view.html"));
-			assert(pathsMatch(paths.widgetLess("myWidget"), "{root}/widgets/myWidget/skin.less"));
-			assert(pathsMatch(paths.widgetLess("myWidget", "dark"), "{root}/widgets/myWidget/skin.dark.less"));
-			assert(pathsMatch(paths.widgetConfig("1/big/ugly"), "{root}/widgets/1/big/ugly/config.json"));
-			assert(pathsMatch(paths.widgetScript("js/jQuery/1.10.2"), "{root}/widgets/js/jQuery/1.10.2/script.js"));
-			assert(pathsMatch(paths.action("actionName"), "{root}/sites/www.test.com/actions/actionName"));
-			assert(pathsMatch(paths.action("act/shun"), "{root}/sites/www.test.com/actions/act/shun"));
-			assert(pathsMatch(paths.ux("homepage", 123), "{root}/sites/www.test.com/actions/homepage/123.json"));
-			assert(pathsMatch(paths.ux("act/tion", 1), "{root}/sites/www.test.com/actions/act/tion/1.json"));
-			assert(pathsMatch(paths.wireframeJade("tallSkinny"), "{root}/sites/www.test.com/wireframes/tallSkinny.jade"));
-			assert(pathsMatch(paths.wireframeJade("short/fat"), "{root}/sites/www.test.com/wireframes/short/fat.jade"));
-			assert(pathsMatch(paths.wireframeJsph("tallSkinny"), "{root}/sites/www.test.com/wireframes/tallSkinny.jsph"));
-			assert(pathsMatch(paths.wireframeJsph("short/fat"), "{root}/sites/www.test.com/wireframes/short/fat.jsph"));
+			expectPathsMatch(paths.base, "{root}");
+			expectPathsMatch(paths.site, "{root}/sites/www.test.com");
+			expectPathsMatch(paths.static, "{root}/sites/www.test.com/static");
+			expectPathsMatch(paths.libraries, "{root}/libraries");
+			expectPathsMatch(paths.actions, "{root}/sites/www.test.com/actions");
+			expectPathsMatch(paths.widgets, "{root}/widgets");
+			expectPathsMatch(paths.wireframes, "{root}/sites/www.test.com/wireframes");
+			expectPathsMatch(paths.skins, "{root}/sites/www.test.com/skins");
+			expectPathsMatch(paths.library("test"), "{root}/libraries/test/api.js");
+			expectPathsMatch(paths.library("xyz/test"), "{root}/libraries/xyz/test/api.js");
+			expectPathsMatch(paths.widget("abc/widget"), "{root}/widgets/abc/widget");
+			expectPathsMatch(paths.widget("widget/one"), "{root}/widgets/widget/one");
+			expectPathsMatch(paths.widgetLogic("widget1"), "{root}/widgets/widget1/logic.js");
+			expectPathsMatch(paths.widgetJade("wid/get/xyz"), "{root}/widgets/wid/get/xyz/view.jade");
+			expectPathsMatch(paths.widgetJsph("wid/get/xyz"), "{root}/widgets/wid/get/xyz/view.jsph");
+			expectPathsMatch(paths.widgetStaticHtml("123"), "{root}/widgets/123/view.html");
+			expectPathsMatch(paths.widgetLess("myWidget"), "{root}/widgets/myWidget/skin.less");
+			expectPathsMatch(paths.widgetLess("myWidget", "dark"), "{root}/widgets/myWidget/skin.dark.less");
+			expectPathsMatch(paths.widgetConfig("1/big/ugly"), "{root}/widgets/1/big/ugly/config.json");
+			expectPathsMatch(paths.widgetScript("js/jQuery/1.10.2"), "{root}/widgets/js/jQuery/1.10.2/script.js");
+			expectPathsMatch(paths.action("actionName"), "{root}/sites/www.test.com/actions/actionName");
+			expectPathsMatch(paths.action("act/shun"), "{root}/sites/www.test.com/actions/act/shun");
+			expectPathsMatch(paths.ux("homepage", 123), "{root}/sites/www.test.com/actions/homepage/123.json");
+			expectPathsMatch(paths.ux("act/tion", 1), "{root}/sites/www.test.com/actions/act/tion/1.json");
+			expectPathsMatch(paths.wireframeJade("tallSkinny"), "{root}/sites/www.test.com/wireframes/tallSkinny.jade");
+			expectPathsMatch(paths.wireframeJade("short/fat"), "{root}/sites/www.test.com/wireframes/short/fat.jade");
+			expectPathsMatch(paths.wireframeJsph("tallSkinny"), "{root}/sites/www.test.com/wireframes/tallSkinny.jsph");
+			expectPathsMatch(paths.wireframeJsph("short/fat"), "{root}/sites/www.test.com/wireframes/short/fat.jsph");
 			return done();
 		})
 		it("should have set up the routes", function(done) {

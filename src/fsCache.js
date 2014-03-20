@@ -158,6 +158,8 @@ FsCache = function(done) {
 	};
 	var cacheStuff = function(dir, done) {
 		walk(dir, function(err, list) {
+			if (err) console.log(err);
+			list = list || [];
 			async.each(list, function(file, next) {
 				var callNext = function() { next() };
 				if ((/logic\.js$/i).test(file)) {

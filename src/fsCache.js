@@ -14,33 +14,77 @@ FsCache = function(done) {
 	jsph.cache = jsph.cache || {};
 	jade.cache = jade.cache || {};
 
+	jsph.cachedCompile = function(filename, callback) {
+		if (filename in jsph.cache) {
+			return callback(null, jsph.cache[filename]);
+		}
+		_this.readFile(filename, function(err, data) {
+			if (err) console.log(err);
+			if (data) {
+				try {
+					jsph.cache[filename] = jsph.compile(data);
+					return callback(null, jsph.cache[filename]);
+				}
+				catch(e) {
+					console.log(e);
+					jsph.cache[filename] = null;
+					// I'm not entirely sure I want to report the error
+					return callback();
+				}
+			}
+			else {
+				jsph.cache[filename] = null;
+				// I'm not entirely sure I want to report the error
+				return callback();
+			}
+		});
+	}
+
 	jsph.renderFileCached = function(filename, paramObject, callback) {
 		callback = callback || paramObject;
 		if (typeof options == "function") {
 			callback = paramObject;
 			paramObject = null;
 		}
-
-		if(! (filename in  jsph.cache)) {
-			_this.readFile(filename, function(err, data) {
-				if (data) {
-					jsph.cache[filename] = jsph.compile(data);
-				}
-				else {
-					jsph.cache[filename] = null;
-				}
-				return jsph.renderFileCached(filename, paramObject, callback);
-			})
-			return;
-		}
-
-		var renderTemplate = jsph.cache[filename];
-		var result = null;
-		if (typeof renderTemplate == "function") {
-			result = renderTemplate(paramObject);
-		}
-		return callback(null, result);
+		jsph.cachedCompile(filename, function(err, compiledTemplate) {
+			if (err) console.log(err);
+			var result = null;
+			if (typeof compiledTemplate == "function") {
+				result = compiledTemplate(paramObject);
+			}
+			else if (compiledTemplate) {
+				console.log("jsph.renderFile ... template was not a function", compiledTemplate);
+			}
+			return callback(null, result);
+		})
 	}
+
+	jade.cachedCompile = function(filename, callback) {
+		if (filename in jade.cache) {
+			return callback(null, jade.cache[filename]);
+		}
+		_this.readFile(filename, function(err, data) {
+			if (err) console.log(err);
+			if (data) {
+				try {
+					jade.cache[filename] = jade.compile(data, {pretty:true});
+					return callback(null, jade.cache[filename]);
+				}
+				catch(e) {
+					console.log(e);
+					jade.cache[filename] = null;
+					// I'm not entirely sure I want to report the error
+					return callback();
+				}
+			}
+			else {
+				jade.cache[filename] = null;
+				// I'm not entirely sure I want to report the error
+				return callback();
+			}
+		});
+	}
+
 
 	jade.renderFileCached = function(filename, paramObject, callback) {
 		callback = callback || paramObject;
@@ -49,36 +93,25 @@ FsCache = function(done) {
 			paramObject = null;
 		}
 
-		if(! (filename in  jade.cache)) {
-			_this.readFile(filename, function(err, data) {
-				if (data) {
-					jade.cache[filename] = jade.compile(data, paramObject);
-				}
-				else {
-					jade.cache[filename] = null;
-				}
-				return jade.renderFileCached(filename, paramObject, callback);
-			})
-			return;
-		}
-
-		var renderTemplate = jade.cache[filename];
-		var result = null;
-		if (typeof renderTemplate == "function") {
-			result = renderTemplate(paramObject);
-		}
-		return callback(null, result);
+		jade.cachedCompile(filename, function(err, compiledTemplate) {
+			if (err) console.log(err);
+			var result = null;
+			if (typeof compiledTemplate == "function") {
+				result = compiledTemplate(paramObject);
+			}
+			else if (compiledTemplate) {
+				console.log("jade.renderFile ... template was not a function", compiledTemplate);
+			}
+			return callback(null, result);
+		})
 	}
 
 	this.readFile = function(filename, options, callback) {
-		//filename = require.resolve(filename);
-		callback = callback || options;
 		if (typeof options == "function") {
 			callback = options;
 			options = null;
 		}
 		if (filename in contentCache) {
-			//console.log("Already Loaded:", filename);
 			return callback(null, contentCache[filename]);
 		}
 		else {
@@ -86,7 +119,6 @@ FsCache = function(done) {
 			fs.readFile(filename, options, function(err, data) {
 				if (!data) data = null;
 				contentCache[filename] = data;
-				//console.log("Loaded:", filename);
 				return callback(null, contentCache[filename]);
 			});
 			return;
@@ -94,7 +126,6 @@ FsCache = function(done) {
 	}
 
 	this.stat = function(filename, callback) {
-		//filename = require.resolve(filename);
 		if (filename in statCache) {
 			return callback(null, statCache[filename]);
 		}
@@ -109,7 +140,6 @@ FsCache = function(done) {
 	}
 
 	this.exists = function(filename, callback) {
-		//filename = require.resolve(filename);
 		if(filename in existsCache) {
 			return callback(existsCache[filename]);
 		}
@@ -130,7 +160,7 @@ FsCache = function(done) {
 			if (!pending) return done(null, results);
 			list.forEach(function(element) {
 				var file = path.join(dir, element);
-				if (element.substr(0,1) == ".") {
+				if (element.substr(0,1) == "." || element == "node_modules") {
 					if (!--pending) {
 						done(null, results);
 					}
@@ -156,35 +186,31 @@ FsCache = function(done) {
 			});
 		});
 	};
+
 	var cacheStuff = function(dir, done) {
 		walk(dir, function(err, list) {
 			if (err) console.log(err);
 			list = list || [];
 			async.each(list, function(file, next) {
 				var callNext = function() { next() };
-				if ((/logic\.js$/i).test(file)) {
+				if ((/logic\.js$/i).test(file)
+					|| (/api\.js$/i).test(file)
+				) {
 					require(file);
 					callNext();
 				}
-				else if ((/script\.js$/i).test(file)) {
-					_this.readFile(file, callNext);
-				}
-				else if ((/\.json$/i).test(file)) {
+				else if ((/script\.js$/i).test(file)
+					|| (/\.json$/i).test(file)
+					|| (/\.html$/i).test(file)
+					|| (/\.less$/i).test(file)
+				) {
 					_this.readFile(file, callNext);
 				}
 				else if ((/\.jade$/i).test(file)) {
-					_this.readFile(file, callNext);
-					//jade.cache[file] = jade.compile(file, {pretty:true}, doNothing);
+					jade.cachedCompile(file, callNext);
 				}
 				else if ((/\.jsph$/i).test(file)) {
-					_this.readFile(file, callNext);
-					//jsph.cache[file] = jsph.compileFileSync(file);
-				}
-				else if ((/\.html$/i).test(file)) {
-					_this.readFile(file, callNext);
-				}
-				else if ((/\.less$/i).test(file)) {
-					_this.readFile(file, callNext);
+					jsph.cachedCompile(file, callNext);
 				}
 				else {
 					callNext();
@@ -196,6 +222,7 @@ FsCache = function(done) {
 
 	//var fileWatchers;
 	var startWatchr = function() {
+		console.log("Initializing File Watchr");
 		watchr.watch({
 			paths: [wtf.paths.base],
 			ignoreHiddenFiles: true,
@@ -224,35 +251,56 @@ FsCache = function(done) {
 									wtf._loadRoutes();
 								}
 							}
-							if (filePath in contentCache) {
-								console.log("Reloading content", filePath);
-								try {
-									contentCache[filePath] = fs.readFileSync(filePath, "utf8");
-								}
-								catch (err) {
-									console.log(colors.redBright("Unable to load new version of " + filePath));
+							// jade Cache
+							else if (filePath in jade.cache) {
+								var tmpTemplate = jade.cache[filePath];
+								var tmpFile = contentCache[filePath];
+								delete contentCache[filePath];
+								delete jade.cache[filePath];
+								jade.cachedCompile(fsCache.contentCache[filePath], function(err) {
+									console.log(colors.redBright("Unable to build template from new version of " + filePath));
 									console.log(err);
-									console.log("reverting to previously usable version of file");
-								}
-								// Jade Cache
-								if (filePath in jade.cache) {
-									jade.cache[filePath] = jade.compile(fsCache.contentCache[filePath]);
-								}
-								//jsph cache
-								if (filePath in jsph.cache) {
-									jsph.cache[filePath] = jsph.compile(fsCache.contentCache[filePath]);
-								}
+									console.log("reverting to previous version of file");
+									contentCache[filePath] = contentCache[filePath] || tmpFile;
+									jade.cache[filePath] = tmpTemplate;
+								});
+							}
+							// jsph cache
+							else if (filePath in jsph.cache) {
+								var tmpTemplate = jsph.cache[filePath];
+								var tmpFile = contentCache[filePath];
+								delete contentCache[filePath];
+								delete jsph.cache[filePath];
+								jsph.cachedCompile(fsCache.contentCache[filePath], function(err) {
+									console.log(colors.redBright("Unable to build template from new version of " + filePath));
+									console.log(err);
+									console.log("reverting to previous version of file");
+									contentCache[filePath] = contentCache[filePath] || tmpFile;
+									jsph.cache[filePath] = tmpTemplate;
+								});
+							}
+							// plain text contentCache
+							else if (filePath in contentCache) {
+								console.log("Reloading content", filePath);
+								var tmp = contentCache[filePath];
+								delete contentCache[filePath];
+								_this.readFile(filePath, "utf8", function(err) {
+									if (err) {
+										console.log(colors.redBright("Unable to load new version of " + filePath));
+										console.log(err);
+										console.log("reverting to previously usable version of file");
+										contentCache[filePath] = tmp;
+									}
+								})
 							}
 							if (filePath in statCache) {
 								console.log("Reloading stats", filePath);
-								try {
-									statCache[filePath] = fs.statSync(filePath);
-								}
-								catch (err) {
-									console.log(colors.redBright("Unable to load new version of " + filePath));
-									console.log(err);
-									console.log("reverting to previously usable version of file");
-								}
+								_this.stat(filePath, function(err) {
+									if (err) {
+										console.log(colors.redBright("Unable to stat new version of " + filePath));
+										console.log(err);
+									}
+								});
 							}
 							break;
 						}
@@ -262,9 +310,11 @@ FsCache = function(done) {
 							}
 							if (filePath in jade.cache) {
 								delete jade.cache[filePath];
+								jade.cachedCompile(filePath, function() {});
 							}
 							if (filePath in jsph.cache) {
 								delete jsph.cache[filePath];
+								jsph.cachedCompile(filePath, function() {});
 							}
 							break;
 						}
@@ -287,30 +337,10 @@ FsCache = function(done) {
 				if (err) {
 					console.log("Failed to load Watchr:", err);
 				}
-				// if we were unloaded before we ever finished loading, then dump it
-				// if (fileWatchers == "x") {
-				// 	fileWatchers = watchers;
-				// 	stopWatch();
-				// }
-				// else {
-				// 	fileWatchers = watchers;
-				// }
 			}
 		});
 
 	}
-
-	// function stopWatchr() {
-	// 	if (!fileWatchers) {
-	// 		fileWatchers = "x";
-	// 	}
-	// 	else {
-	// 		for (var i in fileWatchers) {
-	// 			fileWatchers[i].close();
-	// 		}
-	// 		fileWatchers = null;
-	// 	}
-	// }
 
 	if (wtf.options.watchr === undefined || wtf.options.watchr !== false) {
 		startWatchr();

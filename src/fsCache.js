@@ -254,6 +254,7 @@ FsCache = function(done) {
 							}
 							// jade Cache
 							else if (filePath in jade.cache) {
+								console.log("Reloading", filePath);
 								var tmpTemplate = jade.cache[filePath];
 								var tmpFile = contentCache[filePath];
 								delete contentCache[filePath];
@@ -270,6 +271,7 @@ FsCache = function(done) {
 							}
 							// jsph cache
 							else if (filePath in jsph.cache) {
+								console.log("Reloading", filePath);
 								var tmpTemplate = jsph.cache[filePath];
 								var tmpFile = contentCache[filePath];
 								delete contentCache[filePath];

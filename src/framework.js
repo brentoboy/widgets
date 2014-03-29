@@ -769,6 +769,7 @@ var wtf = {
 		}
 		request.action = request.action || request.route.action;
 		request.ux = getUx(request) || "default";
+		request.skin = getSkin(request) || "default";
 
 		// TODO: should actually run rules
 		return next();
@@ -1016,4 +1017,9 @@ module.exports = wtf;
 function getUx(request) {
 	if (!request) return "";
 	return request.ux || (request.params?request.params.ux:"") || "";
+}
+
+function getSkin(request) {
+	if (!request) return "";
+	return request.skin || (request.params?request.params.skin:"") || "";
 }

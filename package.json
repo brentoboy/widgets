@@ -2,7 +2,7 @@
   "author": "Brent Larsen",
   "name": "widgets",
   "description": "Widgets, the Framework: a web development framework designed to make it easy to build multiple sites using configurable widgets.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "repository": {
     "type": "git",
     "url": "git://github.com/brentoboy/widgets.git"

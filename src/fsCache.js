@@ -4,6 +4,7 @@ var jade = require('jade');
 var fs = require('fs');
 var path = require('path');
 var async = require('async');
+var colors = require('cli-color');
 
 FsCache = function(done) {
 	var _this = this;
@@ -257,12 +258,14 @@ FsCache = function(done) {
 								var tmpFile = contentCache[filePath];
 								delete contentCache[filePath];
 								delete jade.cache[filePath];
-								jade.cachedCompile(fsCache.contentCache[filePath], function(err) {
-									console.log(colors.redBright("Unable to build template from new version of " + filePath));
-									console.log(err);
-									console.log("reverting to previous version of file");
-									contentCache[filePath] = contentCache[filePath] || tmpFile;
-									jade.cache[filePath] = tmpTemplate;
+								jade.cachedCompile(filePath, function(err) {
+									if (err) {
+										console.log(colors.redBright("Unable to build template from new version of " + filePath));
+										console.log(err);
+										console.log("reverting to previous version of file");
+										contentCache[filePath] = contentCache[filePath] || tmpFile;
+										jade.cache[filePath] = tmpTemplate;
+									}
 								});
 							}
 							// jsph cache
@@ -271,12 +274,14 @@ FsCache = function(done) {
 								var tmpFile = contentCache[filePath];
 								delete contentCache[filePath];
 								delete jsph.cache[filePath];
-								jsph.cachedCompile(fsCache.contentCache[filePath], function(err) {
-									console.log(colors.redBright("Unable to build template from new version of " + filePath));
-									console.log(err);
-									console.log("reverting to previous version of file");
-									contentCache[filePath] = contentCache[filePath] || tmpFile;
-									jsph.cache[filePath] = tmpTemplate;
+								jsph.cachedCompile(filePath, function(err) {
+									if (err) {
+										console.log(colors.redBright("Unable to build template from new version of " + filePath));
+										console.log(err);
+										console.log("reverting to previous version of file");
+										contentCache[filePath] = contentCache[filePath] || tmpFile;
+										jsph.cache[filePath] = tmpTemplate;
+									}
 								});
 							}
 							// plain text contentCache

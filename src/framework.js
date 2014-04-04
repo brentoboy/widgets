@@ -23,10 +23,6 @@ var wtf = {
 		if (!wtf.options.root) {
 			wtf.options.root = path.dirname(require.main.filename);
 		}
-		if (!wtf.options.site) {
-			wtf.options.site = process.argv.length > 2 ? process.argv[2].toString() : "unknown-site"
-		}
-
 		wtf.paths = require("./paths.js");
 
 		wtf.fsCache = new FsCache(function() {
@@ -42,7 +38,7 @@ var wtf = {
 	},
 
 	_loadRoutes: function() {
-		var routePath = path.join(wtf.paths.site, "routes.js");
+		var routePath = path.join(wtf.paths.routes, "routes.js");
 		var routes = require(routePath);
 
 		routes._css = routes._css || "/css/(string:ux).css";
@@ -569,6 +565,8 @@ var wtf = {
 	extractParams: function(request, response, next) {
 		request.log.info("extractParams");
 		var parsedUrl = urlParser.parse(request.url || '', true);
+		request.path = parsedUrl.path;
+
 		// start with pretty pars
 		request.params = (request.route)
 			? request.route.scrape(parsedUrl.pathname)
@@ -788,6 +786,8 @@ var wtf = {
 		var loadWidgets = {};
 		var renderWidgets = {};
 		request.page = new Page(request.log, request.action, request.ux);
+		request.page.requestPath = request.path;
+		request.page.session = request.session;
 
 		async.series([
 			// load the action/ux config file

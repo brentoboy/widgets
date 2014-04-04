@@ -3,13 +3,14 @@ var path = require("path");
 
 var paths = {};
 paths.base = wtf.options.root;
-paths.site = path.join(paths.base, 'sites', wtf.options.site);
-paths.static = path.join(paths.site, 'static');
+paths.static = path.join(paths.base, 'static');
 paths.libraries = path.join(paths.base, 'libraries');
-paths.actions = path.join(paths.site, 'actions');
+paths.actions = path.join(paths.base, 'actions');
 paths.widgets = path.join(paths.base, 'widgets');
-paths.wireframes = path.join(paths.site, 'wireframes');
-paths.skins = path.join(paths.site, 'skins');
+paths.wireframes = path.join(paths.base, 'wireframes');
+paths.skins = path.join(paths.base, 'skins');
+paths.routes = path.join(paths.base, 'routes');
+paths.configs = path.join(paths.base, 'configs');
 
 paths.library = function(libraryName) {
 	return path.join(
@@ -108,13 +109,6 @@ paths.wireframeJsph = function(wireframeName) {
 	return path.join(
 		paths.wireframes
 		, wireframeName + ".jsph"
-	);
-}
-
-paths.dataSource = function (dataSourceName) {
-	return path.join(
-		paths.dataSources
-		, dataSourceName + ((/\.js$/).test(dataSourceName) ? "" : ".js")
 	);
 }
 

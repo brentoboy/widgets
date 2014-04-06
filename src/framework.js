@@ -578,7 +578,7 @@ var wtf = {
 		// then apply "post" params
 		// NOTE ... this expects some other middleware to have set up "request.body"
 		if (request.method == "POST" && request.body) {
-			var post = querystring.parse(request.body);
+			var post = (typeof request.body == "object" ? request.body : querystring.parse(request.body));
 			for (key in post) {
 				request.params[key] = post[key];
 			}

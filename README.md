@@ -1,6 +1,6 @@
 widgets
 =======
 
-a node.js multi-site web framework designed around the concept of building pages from configurable, reusable widgets.
+a node.js web framework designed around the concept of pages out of swidgets.
 
 documentation coming soon (er or later)

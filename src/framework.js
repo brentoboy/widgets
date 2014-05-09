@@ -44,6 +44,7 @@ var wtf = {
 		routes._css = routes._css || "/css/(string:ux).css";
 		routes._js = routes._js || "/js/(string:ux).js";
 		routes._dev = routes._dev || "/dev/(path:theWidget)";
+		routes._ajax = routes._ajax || "/ajax/(path:theWidget)";
 
 		for(routeKey in routes) {
 			if (typeof routes[routeKey] == "string") {
@@ -816,7 +817,9 @@ var wtf = {
 						var widgetConfigs = block[widgetIndex];
 						widgetConfigs.id = widgetConfigs.id || (blockIndex + "-" + widgetIndex);
 
-						if (widgetConfigs.id == "theWidget" && request.page.action == "_dev") {
+						if (widgetConfigs.id == "theWidget" 
+							&& (request.page.action == "_dev" || request.page.action == "_ajax")) 
+						{
 							widgetConfigs.widget = request.params["theWidget"];
 						}
 
